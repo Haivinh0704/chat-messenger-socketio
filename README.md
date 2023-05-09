@@ -141,6 +141,14 @@ const initSocket = async () => {
 
 See [Changelog](./CHANGELOG.md) for more information.
 
+## giturl :
+
+https://github.com/Haivinh0704/chat-messenger-socketio
+
+## npm :
+
+https://www.npmjs.com/package/@haivinh/chat-messenger
+
 ## License
 
 Licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
