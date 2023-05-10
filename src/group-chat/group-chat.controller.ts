@@ -10,6 +10,7 @@ import {
   Param,
   Post,
   Query,
+  Put,
   Req,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -42,6 +43,15 @@ export class GroupChatController {
       req.headers.authorization,
     );
     return await this.groupChatService.createGroup(payload.listIdUser, idUser);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Mute Messenger in groups' })
+  public async muteMessenger(@Param('id') id: string, @Req() req: any) {
+    var idUser = await this.authenticationService.decode(
+      req.headers.authorization,
+    );
+    return await this.groupChatService.muteMessenger(id, idUser);
   }
 
   @Delete(':id')

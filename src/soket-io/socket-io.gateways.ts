@@ -157,6 +157,22 @@ export class SocketGateway
     }
   }
 
+  @OnEvent(EMITTER_SOCKET.ONCONVER_SATION_LEAVE)
+  async handlLeaveGroupToClient(dataEmitterLeave: any) {
+    try {
+      for (let index = 0; index < dataEmitterLeave.idClient.length; index++) {
+        this.server.emit(
+          `${EMITTER_SOCKET.ONCONVER_SATION_LEAVE}-${dataEmitterLeave.idClient[index]}`,
+          dataEmitterLeave.idGroup,
+        );
+      }
+    } catch (error) {
+      // throw error;
+      console.log('update messenger error ============>', error);
+      this.server.emit(OPTION_SUBSCRIP.MESSENGER_ERR, { error: error });
+    }
+  }
+
   /**
    * TODO : join user in room socket by id group
    * @param client : client socket
@@ -189,7 +205,7 @@ export class SocketGateway
     @MessageBody() idGroup: string,
   ) {
     try {
-      client.leave(`${OPTION_SUBSCRIP.ONCONVER_SATION_LEAVE}${idGroup}`);
+      client.leave(`${OPTION_SUBSCRIP.START_NAME_GROUP}${idGroup}`);
       client.emit(OPTION_SUBSCRIP.RESULT_LEAVE_GROUP, {
         leaveRoom: true,
       });

@@ -21,6 +21,7 @@ export interface CustomerSocketOptions {
   // emiter: SubScribeMessengerOption;
   AliasIdUser: string;
   EntityUser: Function;
+  AliasNameUser: string;
   AliasIdInJWTToken: string;
 }
 

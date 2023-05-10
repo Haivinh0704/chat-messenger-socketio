@@ -9,11 +9,6 @@ export const STATUS_MESSENGER = {
   HIDE_BY_USER: 2, // remover messenger by user other
 };
 
-export const ISREAD = {
-  READ: 0,
-  UNREAD: 1,
-};
-
 @Entity('messenger')
 export class Messenger extends AbstractEntity {
   @Column('text')
@@ -30,9 +25,9 @@ export class Messenger extends AbstractEntity {
   @Column('int', { default: STATUS_MESSENGER.ACTIVE })
   status: number;
 
-  @Column('int', { default: ISREAD.UNREAD })
-  isRead: number;
+  @Column('text', { nullable: true, default: null }) // hide messenger in case the user deletes the group
+  hideInListUser: string;
 
-  @Column('simple-array') // hide messenger in case the user deletes the group
-  hideInListUser: string[];
+  @Column('text', { nullable: true, default: null })
+  listUserUnRead: string;
 }

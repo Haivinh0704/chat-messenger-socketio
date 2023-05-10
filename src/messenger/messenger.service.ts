@@ -5,7 +5,7 @@ https://docs.nestjs.com/providers#services
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
-import { DataSource, Not } from 'typeorm';
+import { DataSource, Not, Like } from 'typeorm';
 import { GroupChatRepository } from '../group-chat/group-chat.repository';
 import {
   CustomerSocketOptions,
@@ -18,7 +18,6 @@ import {
 } from './messenger.dto';
 import { MessengerRepository } from './messenger.repository';
 import {
-  ISREAD,
   Messenger,
   STATUS_MESSENGER,
 } from '../database/entities/messenger.entity';
@@ -56,7 +55,8 @@ export class MessengerService {
               group_chat_id: { id: idGroup },
               user_id: Not(idUser),
               status: STATUS_MESSENGER.ACTIVE,
-              isRead: ISREAD.UNREAD,
+              listUserUnRead: Like(`%${idUser}%`),
+              // isRead: ISREAD.UNREAD,
             },
             relations: { group_chat_id: true },
           }),
@@ -64,14 +64,22 @@ export class MessengerService {
         ])
           .then(async ([listMessengerUnread, listMessenger]) => {
             var listData = [];
-            await this.transactionReadMessegner(
-              listMessengerUnread.map((e) => ({
+            const param = listMessengerUnread.map((e) => {
+              const array = e.listUserUnRead.split(',');
+              const index = array.findIndex((elm) => elm === idUser);
+              array.splice(index, 1);
+
+              return {
                 ...e,
-                isRead: ISREAD.READ,
-              })),
-            );
+                listUserUnRead: array.join(','),
+              };
+            });
+
+            await this.transactionReadMessegner(param);
             listMessenger.content.map((e) => {
-              if (!e.hideInListUser.includes(idUser)) {
+              console.log('e==================================>', e);
+
+              if (!e?.hideInListUser?.includes(idUser)) {
                 var param = {
                   content: e.messenger,
                   id: e.id,
@@ -110,7 +118,13 @@ export class MessengerService {
           .then(async ([group, user]) => {
             if (!group || !user)
               throw new BadRequestException('group not found');
-            return await this.transactionCreate(payload, idUser, group);
+
+            return await this.transactionCreate(
+              payload,
+              idUser,
+              group,
+              user[this.option.AliasNameUser] ?? 'user name',
+            );
           })
           .then((res) => resolve(res))
           .catch((err) => reject(err));
@@ -159,7 +173,7 @@ export class MessengerService {
    * @param idUser : list id User
    * @returns list id User
    */
-  async _checkUser(idUser: string): Promise<boolean> {
+  async _checkUser(idUser: string): Promise<any> {
     try {
       const finalResult = await this.dataSource.manager.transaction(
         async (transactionalEntityManager) => {
@@ -171,7 +185,7 @@ export class MessengerService {
             )
             .getOne();
           if (!user) throw new BadRequestException('user not found');
-          return true;
+          return user;
         },
       );
       return finalResult;
@@ -214,6 +228,7 @@ export class MessengerService {
     param: MessengerDto,
     user_id: string,
     group: GroupChat,
+    nameUser: string,
   ) {
     try {
       const finalResult = await this.dataSource.manager.transaction(
@@ -222,26 +237,40 @@ export class MessengerService {
             messenger: param.content,
             user_id: user_id,
             group_chat_id: group,
-            hideInListUser: [],
+            hideInListUser: null,
+            listUserUnRead: group.listIdUser
+              .split(',')
+              .filter((e) => e !== user_id)
+              .join(','),
           };
-
-          const result = await transactionalEntityManager.save(
-            Messenger,
-            dataSave,
-          );
-          var paramSendMessenger: ResultMessengerData = {
-            createdOnDate: result.createdOnDate,
-            id: result.id,
-            content: result.messenger,
-            idGroup: group.id,
-            idUser: result.user_id,
-          };
-          this.eventEmitter.emit(
-            EMITTER_SOCKET.SEND_MESSENGER,
-            paramSendMessenger,
-          );
-
-          return result;
+          return new Promise((resolve, reject) => {
+            Promise.all([
+              transactionalEntityManager.save(Messenger, dataSave),
+              group.hideInListUser
+                ? transactionalEntityManager.save(GroupChat, {
+                    ...group,
+                    hideInListUser: null,
+                  })
+                : Promise.resolve(null),
+            ])
+              .then(([result, _]) => {
+                var paramSendMessenger: ResultMessengerData = {
+                  createdOnDate: result.createdOnDate,
+                  id: result.id,
+                  content: result.messenger,
+                  idGroup: group.id,
+                  idUser: result.user_id,
+                  nameUser: nameUser,
+                };
+                this.eventEmitter.emit(
+                  EMITTER_SOCKET.SEND_MESSENGER,
+                  paramSendMessenger,
+                );
+                return result;
+              })
+              .then((res) => resolve(res))
+              .catch((err) => reject(err));
+          });
         },
       );
       return finalResult;
@@ -274,8 +303,11 @@ export class MessengerService {
             if (
               payload.status != STATUS_MESSENGER.HIDE_BY_USER &&
               messenger.user_id != idUser
-            )
-              dataSave.hideInListUser.push(idUser);
+            ) {
+              const array = dataSave.hideInListUser.split(',');
+              array.push(idUser);
+              dataSave.hideInListUser = array.join(',');
+            }
           }
 
           const result = await transactionalEntityManager.save(
@@ -301,26 +333,30 @@ export class MessengerService {
     try {
       const finalResult = await this.dataSource.manager.transaction(
         async (transactionalEntityManager) => {
-          const messengerInGroup = await transactionalEntityManager
-            .find(Messenger, {
+          const messengerInGroup = await transactionalEntityManager.find(
+            Messenger,
+            {
               where: { group_chat_id: { id: group.id } },
               relations: { group_chat_id: true },
-            })
-            .then((res) =>
-              res.map((e) => {
-                if (!e.hideInListUser.includes(idUser))
-                  e.hideInListUser.push(idUser);
-                var param = {
-                  ...e,
-                };
+            },
+          );
 
-                return param;
-              }),
-            );
+          var param = [];
+          messengerInGroup.map((e) => {
+            param.push({
+              ...e,
+              hideInListUser:
+                e?.hideInListUser && e?.hideInListUser.trim() != ''
+                  ? e?.hideInListUser.includes(idUser)
+                    ? e.hideInListUser
+                    : `${e.hideInListUser},${idUser}`
+                  : idUser,
+            });
+          });
 
           const result = await transactionalEntityManager.save(
             Messenger,
-            messengerInGroup,
+            param,
           );
 
           return result;
