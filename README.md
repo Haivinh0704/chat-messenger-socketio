@@ -49,6 +49,7 @@ Example:
             AliasIdInJWTToken: 'id',
             AliasIdUser: 'user_id',
             EntityUser: User,
+            AliasNameUser: 'email';
         }),
 ```
 
@@ -114,40 +115,43 @@ in App.js you can connect socket io and listen event socket
 
 ```bash
 Example :
-const initSocket = async () => {
-    await socket.connect();
-    var socketId = socket.connect().id;
-    console.log("socket id connect to server ======>",socketId);
+/**
+ * TODO : innit Socket and listing Event socket io
+ * @param {*} setMessenger : func set Messenger
+ * @param {*} addMessenger : func Add Messenger
+ */
+export const initSocket = async (setMessenger, addMessenger) => {
+  await socket.connect();
+  socket.on("recMessage", (messenger) => {
+    console.log("recMessage ==================>", messenger);
+    setMessenger(null);
+    addMessenger(messenger);
+  });
 
-    socket.on(socketId, (idGroup) => {
-      console.log(`${socket.id} go to room =====>`, idGroup);
+  socket.on("connect", () => {
+    socket.on(socket.id, (idGroup) => {
+      console.log(`${socket.id}=====================>`, idGroup);
       socket.emit("onConversationJoin", idGroup);
     });
 
-    socket.on("recMessage", (messenger) => {
-      console.log("recMessage ==================>", messenger);
-      setMessenger(null);
-      _addMessenger(messenger);
+    socket.on(`msg.leaveRoom-${socket.id}`, (idGroup) => {
+      console.log(
+        `${socket.id}========onConversationLeave=============>`,
+        idGroup
+      );
+      socket.emit("onConversationLeave", idGroup);
     });
+  });
 
-    socket.on("resultMessenger", (data) => {
-      console.log("resultMessengerFailder ==================>", data);
-      if (!data.content) notification("fail to messenger");
-    });
-  };
+  socket.on("resultMessenger", (data) => {
+    if (!data.content) notification("fail to messenger");
+  });
+};
 ```
 
 ## Change Log
 
 See [Changelog](./CHANGELOG.md) for more information.
-
-## giturl :
-
-https://github.com/Haivinh0704/chat-messenger-socketio
-
-## npm :
-
-https://www.npmjs.com/package/@haivinh/chat-messenger
 
 ## License
 

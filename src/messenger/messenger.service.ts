@@ -77,8 +77,6 @@ export class MessengerService {
 
             await this.transactionReadMessegner(param);
             listMessenger.content.map((e) => {
-              console.log('e==================================>', e);
-
               if (!e?.hideInListUser?.includes(idUser)) {
                 var param = {
                   content: e.messenger,

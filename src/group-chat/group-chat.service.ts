@@ -132,7 +132,9 @@ export class GroupChatService {
                   listMessenger.findIndex(
                     (elm) => elm.group_chat_id.id === e.id,
                   ),
-                  listUser.findIndex((elm) => e.listIdUser.includes(elm.id)),
+                  listUser.findIndex((elm) =>
+                    e.listIdUser.includes(elm[this.option.AliasIdUser]),
+                  ),
                   listMessengerUnread.findIndex((elm) => elm.idGroup === e.id),
                 ];
                 listDataConvert.push({
@@ -319,8 +321,6 @@ export class GroupChatService {
     try {
       const finalResult = await this.dataSource.manager.transaction(
         async (transactionalEntityManager) => {
-          console.log('listIdUser===========================>', listIdUser);
-
           const dataSave = {
             name: `${listIdUser.join('_')}_${new Date().toISOString()}`, // name group
             listIdUser: listIdUser.join(','),

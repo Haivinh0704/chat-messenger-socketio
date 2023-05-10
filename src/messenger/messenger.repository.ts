@@ -46,8 +46,6 @@ export class MessengerRepository extends Repository<Messenger> {
 
   async findMessengerUnReadByIdUser(idUser: string, idGroup: string) {
     try {
-      console.log('idUser========>', idUser);
-
       const query = await this.createQueryBuilder('messenger')
         .leftJoinAndSelect('messenger.group_chat_id', 'group_chat_id')
         .where(`messenger.listUserUnRead like '%${idUser}%'`)
