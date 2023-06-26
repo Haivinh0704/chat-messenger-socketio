@@ -149,6 +149,55 @@ export const initSocket = async (setMessenger, addMessenger) => {
 };
 ```
 
+### Follow socket :
+1. Start call api listGroup
+```bash
+API : api/group-user?page=1&size=20 || Method : GET
+```
+2. After getting the group id, we will pull the user into that grop using the client's socket.id
+```bash
+socket.on(socket.id, (idGroup) => {
+  console.log(`${socket.id}=====================>`, idGroup);
+  socket.emit("onConversationJoin", idGroup);
+});
+```
+3. After dragging the client into the room, the client will receive the messenger by event recMessage,you need to check condition in recMessenger messenger for best display
+```bash
+socket.on("recMessage", (messenger) => {
+  console.log("recMessage ==================>", messenger);
+  setMessenger(null);
+  addMessenger(messenger);
+});
+```
+
+4. Send a message to the group, you will call
+```bash
+API : api/messenger || Method : POST
+param = replyTo == null
+          ? {"content": messenger, "group_id": idGroup}
+          : {"content": messenger, "group_id": idGroup, "replyTo": replyTo};
+```
+
+5. Create and join group, you wil call 
+```bash
+API : api/group-user || Method : POST
+param = {"listIdUser": \[idUser\]}
+```
+
+6. If you want to mute a group, you'll need to call. Since it only hides notifications, notification display will need to be set up in the frontend
+```bash
+API : api/group-user/$idGroup || Method : PUT
+```
+
+7. If you want to delete all messages in the group, you will call. It will delete all old messages in the group for you
+```bash
+API : api/group-user/$idGroup || Method : DELETE
+```
+
+8. If you want to revoke or delete user messages, please call. It will change the status of messenger ( 0 : active, 1 : unactive, 2: hide by user )
+```bash
+API : api/messenger/$idMessenger || Method : DELETE
+```
 ## Change Log
 
 See [Changelog](./CHANGELOG.md) for more information.
