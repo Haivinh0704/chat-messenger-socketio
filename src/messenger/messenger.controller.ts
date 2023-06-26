@@ -5,6 +5,7 @@ https://docs.nestjs.com/controllers#controllers
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -58,5 +59,17 @@ export class MessengerController {
       req.headers.authorization,
     );
     return await this.messengerService.update(payload, id, idUser);
+  }
+  
+  @Delete(':id')
+  @ApiOperation({ summary: 'delete messenger id messenger' })
+  public async delete(
+      @Param('id') id: string,
+      @Req() req: any,
+  ) {
+      var idUser = await this.authenticationService.decode(
+          req.headers.authorization,
+      );
+      return await this.messengerService.deleteMessenger( id, idUser);
   }
 }

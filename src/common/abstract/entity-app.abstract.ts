@@ -13,7 +13,7 @@ export abstract class AbstractEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @CreateDateColumn({ select: false })
+  @CreateDateColumn()
   createdOnDate: Date;
 
   @Column({ nullable: true, select: false })

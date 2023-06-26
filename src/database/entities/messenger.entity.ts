@@ -22,6 +22,10 @@ export class Messenger extends AbstractEntity {
   @Index()
   group_chat_id: GroupChat;
 
+  @ManyToOne(()=>Messenger, {nullable:true})
+  @JoinColumn({name:'reply'})
+  reply: Messenger;
+
   @Column('int', { default: STATUS_MESSENGER.ACTIVE })
   status: number;
 

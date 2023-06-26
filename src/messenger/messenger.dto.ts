@@ -11,6 +11,12 @@ export class MessengerDto {
   @IsString()
   @IsNotEmpty()
   group_id: string;
+
+  
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  replyTo: string;
 }
 
 export class UpdateMessengerDto {
@@ -18,11 +24,6 @@ export class UpdateMessengerDto {
   @IsString()
   @IsOptional()
   content: string;
-
-  @ApiProperty()
-  @IsString()
-  @IsOptional()
-  status: number;
 }
 
 export class ResultMessengerData {
@@ -32,4 +33,5 @@ export class ResultMessengerData {
   createdOnDate: string | any;
   idGroup: string;
   nameUser: string;
+  reply:any
 }

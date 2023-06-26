@@ -12,14 +12,17 @@ export class MessengerRepository extends Repository<Messenger> {
   public async getAllMessengerByIdGroup(
     idGroupChat: string,
     filter: SearchFilter,
+    idUser :string
+
   ) {
     const query = this.createQueryBuilder('messenger')
       .leftJoinAndSelect('messenger.group_chat_id', 'group_chat_id')
+      .leftJoinAndSelect('messenger.reply', 'reply')
       .where('messenger.group_chat_id = :idGroupChat', {
         idGroupChat: idGroupChat,
       })
       .andWhere('NOT (messenger.hideInListUser like :idUser  ) ', {
-        idUser: `%1b77819d-96c7-408f-80cd-5ba1b6323e6f%`,
+        idUser: `%${idUser}%`,
       })
       .orWhere(
         'messenger.group_chat_id = :idGroupChat AND  messenger.hideInListUser IS NULL',
@@ -33,7 +36,7 @@ export class MessengerRepository extends Repository<Messenger> {
         'messenger.status',
         'messenger.hideInListUser',
       ]);
-    const result = toPaginationResponse({
+    const result = await toPaginationResponse({
       query,
       alias: 'messenger',
       columnDirection: 'createdOnDate',
@@ -41,7 +44,8 @@ export class MessengerRepository extends Repository<Messenger> {
       page: filter.page,
       sort: filter.sort || 'ascend',
     });
-    return await result;
+    result.content.reverse()
+    return result;
   }
 
   async findMessengerUnReadByIdUser(idUser: string, idGroup: string) {
