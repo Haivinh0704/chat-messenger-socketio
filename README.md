@@ -198,6 +198,112 @@ API : api/group-user/$idGroup || Method : DELETE
 ```bash
 API : api/messenger/$idMessenger || Method : DELETE
 ```
+
+## Set up Adapter and middleware
+# middleware socket io
+create file authen-socket.ts in server
+```bash
+import {
+    UnauthorizedException,
+} from '@nestjs/common';
+import { IoAdapter } from '@nestjs/platform-socket.io';
+import { Socket } from 'socket.io';
+import { User } from 'src/database/entities/user.entity';
+import { JwtService } from '@nestjs/jwt';
+
+export interface AuthenticatedSocket extends Socket {
+    user?: User;
+}
+
+export class AuthAdapter extends IoAdapter {
+    createIOServer(port: number, options?: any): any {
+        const server = super.createIOServer(port, { ...options, cors: true });
+        //	Adds the middleware function to the websocket server.
+        console.log('run to middleware ========================>');
+
+        server.use((socket: AuthenticatedSocket, next) => {
+            if (socket.handshake.auth && socket.handshake.auth.token) {
+                const jwtService: JwtService = new JwtService();
+                const jwt = socket.handshake.auth.token.replace('Bearer ', '');
+                var data = jwtService.decode(jwt, { json: true });
+                console.log(
+                    'run to check authenrication ======================>',
+                    socket.handshake.auth.token,
+                );
+                if (data) {
+                    console.log('authenrication ======================>', data);
+                    next();
+                } else {
+                    console.log(
+                        'failder authenrication ======================>',
+                        data,
+                    );
+                    next(
+                        new UnauthorizedException(
+                            `Authentication error ${socket.handshake.auth.token}`,
+                        ),
+                    );
+                }
+            } else {
+                next(
+                    new UnauthorizedException(
+                        `Authentication error ${socket.handshake.auth.token}`,
+                    ),
+                );
+            }
+        });
+        return server;
+    }
+}
+```
+
+add option in client 
+```bash
+export const socket = io(BASEDOMAIN_SOCKETIO, {
+  transports: ["websocket", "polling"],
+  // upgrade:true,
+  withCredentials: true,
+  autoConnect: false,
+  auth: { token: `Bearer ${token}` }
+});
+```
+
+RedisIoAdapter : create file redis-adapter-config.ts in server 
+```bash
+
+import { IoAdapter } from '@nestjs/platform-socket.io';
+import { ServerOptions } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { createClient } from 'redis';
+
+export class RedisIoAdapter extends IoAdapter {
+  private adapterConstructor: ReturnType<typeof createAdapter>;
+
+  async connectToRedis(): Promise<void> {
+    const pubClient = createClient({ 
+      url: `redis://${process.env.TYPEORM_REDIS_HOST}:${process.env.TYPEORM_REDIS_PORT}`,
+      password:process.env.TYPEORM_REDIS_PASSWORD.toString() || '123456'
+    });
+    
+    const subClient = pubClient.duplicate();
+    await Promise.all([pubClient.connect(), subClient.connect()])
+
+    this.adapterConstructor = createAdapter(pubClient, subClient);
+  }
+
+  createIOServer(port: number, options?: ServerOptions): any {
+    const server = super.createIOServer(port, options);
+    server.adapter(this.adapterConstructor);
+    console.log('server IO  ===========================>',server);
+    return server;
+  }
+}
+```
+
+
+
+Create 
+
 ## Change Log
 
 See [Changelog](./CHANGELOG.md) for more information.
