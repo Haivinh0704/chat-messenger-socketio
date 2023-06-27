@@ -35,6 +35,27 @@ export class MessengerService {
     private eventEmitter: EventEmitter2,
   ) {}
 
+      /**
+   * TODO : count total Messenger unread
+   * @param idUser : String
+   * @returns 
+   */
+      public async countMessengerUnread(idUser:string){
+        try {
+            const totalMessengerUnread = await this.messengerRepository.count(
+                    {where:{
+                        user_id: Not(idUser),
+                        status: STATUS_MESSENGER.ACTIVE,
+                        listUserUnRead: Like(`%${idUser}%`)}
+                    }
+                );
+            return totalMessengerUnread ?? 0
+        } catch (error) {
+            throw error;
+        }
+    }  
+
+
   /**
    * TODO : get list messenger in group || remover messenger to user delete
    * @param filter : SearchFilter

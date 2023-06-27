@@ -26,6 +26,19 @@ export class MessengerController {
     private messengerService: MessengerService,
     private authenticationService: AuthenticationService,
   ) {}
+
+    
+  @Get('')
+  @ApiOperation({ summary: 'count messenger unred' })
+  public async countMessengerUnread(
+      @Req() req: any,
+  ) {
+      var idUser = await this.authenticationService.decode(
+          req.headers.authorization,
+      );
+      return await this.messengerService.countMessengerUnread(idUser);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'get list messenger in group by id Group' })
   public async get(
