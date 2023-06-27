@@ -267,8 +267,8 @@ export const socket = io(BASEDOMAIN_SOCKETIO, {
   auth: { token: `Bearer ${token}` }
 });
 ```
-
-RedisIoAdapter : create file redis-adapter-config.ts in server 
+# RedisIoAdapter 
+create file redis-adapter-config.ts in server 
 ```bash
 
 import { IoAdapter } from '@nestjs/platform-socket.io';
@@ -298,6 +298,15 @@ export class RedisIoAdapter extends IoAdapter {
     return server;
   }
 }
+```
+
+# main.ts server
+add line to main.ts 
+```bash
+    app.useWebSocketAdapter(new AuthAdapter(app)); // middleware socket adapter
+    const redisIoAdapter = new RedisIoAdapter(app); // redis socket adapter
+    await redisIoAdapter.connectToRedis();
+    app.useWebSocketAdapter(redisIoAdapter);
 ```
 
 
