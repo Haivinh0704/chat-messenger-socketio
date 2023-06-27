@@ -32,8 +32,10 @@ import {
 @WebSocketGateway({
   cors: {
     origin: true,
+    credentials: true
   },
-  transports: ['websocket'],
+  transports: ['websocket','polling'],
+  path:'/message/'
   // add more option //https://socket.io/docs/v4/server-options/
 })
 export class SocketGateway

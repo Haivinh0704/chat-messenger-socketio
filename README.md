@@ -100,9 +100,10 @@ add to option socketio front-end
 ```bash
 Eample :
 const URL = "http://localhost:4000";
-export const socket = io(URL, {
+  transports: ["websocket", "polling"],
   transports: ["websocket"],
   autoConnect: false,
+  path:'/message/',
   auth: { token: `Bearer ${localStorage.getItem("token")}` }
 });
 ```
