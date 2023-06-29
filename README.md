@@ -14,7 +14,8 @@
   </a>
 </div>
 
-# Description : 
+# Description :
+
 These days nestjs and ws are also gradually developing, I have written a way to help you have the most basic chat-message, including related to messages such as send message, recall, send media, count message, ... and the basics of socket client.
 
 => Also you can find instructions about it on the page : https://socket.io/docs/v4/ and https://docs.nestjs.com/
@@ -43,10 +44,11 @@ import package :
 
 In file "app.module.ts" import socket io to module :
 
-- 3 way :
+- step import :
   - AliasIdInJWTToken : alias id user in jwt token
   - AliasIdUser : alias column id user
   - EntityUser : entities user in project
+  - AliasNameUser: 'email';
 
 ```bash
 Example:
@@ -156,18 +158,24 @@ export const initSocket = async (setMessenger, addMessenger) => {
 ```
 
 ### Follow socket :
+
 1. Start call api listGroup
+
 ```bash
 API : api/group-user?page=1&size=20 || Method : GET
 ```
+
 2. After getting the group id, we will pull the user into that grop using the client's socket.id
+
 ```bash
 socket.on(socket.id, (idGroup) => {
   console.log(`${socket.id}=====================>`, idGroup);
   socket.emit("onConversationJoin", idGroup);
 });
 ```
+
 3. After dragging the client into the room, the client will receive the messenger by event recMessage,you need to check condition in recMessenger messenger for best display
+
 ```bash
 socket.on("recMessage", (messenger) => {
   console.log("recMessage ==================>", messenger);
@@ -177,7 +185,9 @@ socket.on("recMessage", (messenger) => {
 ```
 
 4. Send a message to the group, you will call
+
 ### note :
+
 Since you will need upload management I won't interfere to best protect your privacy, I will just save urlMedia on messenger and not add anything else, retrieving sent media count is also based on go to urlMedia sent on message
 
 ```bash
@@ -187,35 +197,43 @@ API : api/messenger || Method : POST
       if (urlMedia != null) param['urlMedia'] = urlMedia;
 ```
 
-5. Create and join group, you wil call 
+5. Create and join group, you wil call
+
 ```bash
 API : api/group-user || Method : POST
 param = {"listIdUser": \[idUser\]}
 ```
 
 6. If you want to mute a group, you'll need to call. Since it only hides notifications, notification display will need to be set up in the frontend
+
 ```bash
 API : api/group-user/$idGroup || Method : PUT
 ```
 
 7. If you want to delete all messages in the group, you will call. It will delete all old messages in the group for you
+
 ```bash
 API : api/group-user/$idGroup || Method : DELETE
 ```
 
 8. If you want to revoke or delete user messages, please call. It will change the status of messenger ( 0 : active, 1 : unactive, 2: hide by user )
+
 ```bash
 API : api/messenger/$idMessenger || Method : DELETE
 ```
 
 9. Get list media send to group ( option filter )
+
 ```bash
 API : media-in-group/$idGroup || Method : GET
 ```
 
 ## Set up Adapter and middleware
+
 # middleware socket io
+
 create file authen-socket.ts in server
+
 ```bash
 import {
     UnauthorizedException,
@@ -271,7 +289,8 @@ export class AuthAdapter extends IoAdapter {
 }
 ```
 
-add option in client 
+add option in client
+
 ```bash
 export const socket = io(BASEDOMAIN_SOCKETIO, {
   transports: ["websocket", "polling"],
@@ -281,8 +300,11 @@ export const socket = io(BASEDOMAIN_SOCKETIO, {
   auth: { token: `Bearer ${token}` }
 });
 ```
-# RedisIoAdapter 
-create file redis-adapter-config.ts in server 
+
+# RedisIoAdapter
+
+create file redis-adapter-config.ts in server
+
 ```bash
 
 import { IoAdapter } from '@nestjs/platform-socket.io';
@@ -294,11 +316,11 @@ export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter>;
 
   async connectToRedis(): Promise<void> {
-    const pubClient = createClient({ 
+    const pubClient = createClient({
       url: `redis://${process.env.TYPEORM_REDIS_HOST}:${process.env.TYPEORM_REDIS_PORT}`,
       password:process.env.TYPEORM_REDIS_PASSWORD.toString() || '123456'
     });
-    
+
     const subClient = pubClient.duplicate();
     await Promise.all([pubClient.connect(), subClient.connect()])
 
@@ -315,7 +337,9 @@ export class RedisIoAdapter extends IoAdapter {
 ```
 
 # main.ts server
-add line to main.ts 
+
+add line to main.ts
+
 ```bash
     app.useWebSocketAdapter(new AuthAdapter(app)); // middleware socket adapter
     const redisIoAdapter = new RedisIoAdapter(app); // redis socket adapter
@@ -323,9 +347,7 @@ add line to main.ts
     app.useWebSocketAdapter(redisIoAdapter);
 ```
 
-
-
-Create 
+Create
 
 ## Change Log
 
