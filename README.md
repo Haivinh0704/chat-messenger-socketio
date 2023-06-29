@@ -6,13 +6,18 @@
   </a>
 </div>
 
-<h3 align="center">NestJS npm Package Chat Messenger</h3>
+<h3 align="center">NestJS npm Package Chat Messenger using socket io</h3>
 
 <div align="center">
   <a href="https://nestjs.com" target="_blank">
     <img src="https://img.shields.io/badge/built%20with-NestJs-red.svg" alt="Built with NestJS">
   </a>
 </div>
+
+# Description : 
+These days nestjs and ws are also gradually developing, I have written a way to help you have the most basic chat-message, including related to messages such as send message, recall, send media, count message, ... and the basics of socket client.
+
+=> Also you can find instructions about it on the page : https://socket.io/docs/v4/ and https://docs.nestjs.com/
 
 ### Required
 
@@ -172,11 +177,14 @@ socket.on("recMessage", (messenger) => {
 ```
 
 4. Send a message to the group, you will call
+### note :
+Since you will need upload management I won't interfere to best protect your privacy, I will just save urlMedia on messenger and not add anything else, retrieving sent media count is also based on go to urlMedia sent on message
+
 ```bash
 API : api/messenger || Method : POST
-param = replyTo == null
-          ? {"content": messenger, "group_id": idGroup}
-          : {"content": messenger, "group_id": idGroup, "replyTo": replyTo};
+     var param = {"content": messenger, "group_id": idGroup};
+      if (replyTo != null) param['replyTo'] = replyTo;
+      if (urlMedia != null) param['urlMedia'] = urlMedia;
 ```
 
 5. Create and join group, you wil call 
@@ -198,6 +206,11 @@ API : api/group-user/$idGroup || Method : DELETE
 8. If you want to revoke or delete user messages, please call. It will change the status of messenger ( 0 : active, 1 : unactive, 2: hide by user )
 ```bash
 API : api/messenger/$idMessenger || Method : DELETE
+```
+
+9. Get list media send to group ( option filter )
+```bash
+API : media-in-group/$idGroup || Method : GET
 ```
 
 ## Set up Adapter and middleware
