@@ -11,8 +11,11 @@ export const STATUS_MESSENGER = {
 
 @Entity('messenger')
 export class Messenger extends AbstractEntity {
-  @Column('text')
+  @Column({ type: 'text', nullable: true })
   messenger: string;
+
+  @Column({ type: 'text', nullable: true })
+  urlMedia: string;
 
   @Column({ type: 'varchar', length: 50 })
   user_id: string;
@@ -22,8 +25,8 @@ export class Messenger extends AbstractEntity {
   @Index()
   group_chat_id: GroupChat;
 
-  @ManyToOne(()=>Messenger, {nullable:true})
-  @JoinColumn({name:'reply'})
+  @ManyToOne(() => Messenger, { nullable: true })
+  @JoinColumn({ name: 'reply' })
   reply: Messenger;
 
   @Column('int', { default: STATUS_MESSENGER.ACTIVE })

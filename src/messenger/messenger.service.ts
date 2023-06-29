@@ -5,7 +5,7 @@ https://docs.nestjs.com/providers#services
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
-import { DataSource, Not, Like } from 'typeorm';
+import { DataSource, Not, Like, IsNull } from 'typeorm';
 import { GroupChatRepository } from '../group-chat/group-chat.repository';
 import {
   CustomerSocketOptions,
@@ -34,27 +34,25 @@ export class MessengerService {
     private option: CustomerSocketOptions,
     private eventEmitter: EventEmitter2,
   ) {}
-
-      /**
+  /**
    * TODO : count total Messenger unread
    * @param idUser : String
-   * @returns 
+   * @returns
    */
-      public async countMessengerUnread(idUser:string){
-        try {
-            const totalMessengerUnread = await this.messengerRepository.count(
-                    {where:{
-                        user_id: Not(idUser),
-                        status: STATUS_MESSENGER.ACTIVE,
-                        listUserUnRead: Like(`%${idUser}%`)}
-                    }
-                );
-            return totalMessengerUnread ?? 0
-        } catch (error) {
-            throw error;
-        }
-    }  
-
+  public async countMessengerUnread(idUser: string) {
+    try {
+      const totalMessengerUnread = await this.messengerRepository.count({
+        where: {
+          user_id: Not(idUser),
+          status: STATUS_MESSENGER.ACTIVE,
+          listUserUnRead: Like(`%${idUser}%`),
+        },
+      });
+      return totalMessengerUnread ?? 0;
+    } catch (error) {
+      throw error;
+    }
+  }
 
   /**
    * TODO : get list messenger in group || remover messenger to user delete
@@ -81,7 +79,11 @@ export class MessengerService {
             },
             relations: { group_chat_id: true },
           }),
-          this.messengerRepository.getAllMessengerByIdGroup(idGroup, filter,idUser),
+          this.messengerRepository.getAllMessengerByIdGroup(
+            idGroup,
+            filter,
+            idUser,
+          ),
         ])
           .then(async ([listMessengerUnread, listMessenger]) => {
             var listData = [];
@@ -99,15 +101,16 @@ export class MessengerService {
             await this.transactionReadMessegner(param);
             listMessenger.content.map((e) => {
               // if (!e?.hideInListUser?.includes(idUser)) {
-                var param = {
-                  content: e.messenger,
-                  id: e.id,
-                  idUser: e.user_id,
-                  create_at: e.createdOnDate,
-                  status: e.status,
-                  reply:e.reply
-                };
-                listData.push(param);
+              var param = {
+                content: e.messenger,
+                id: e.id,
+                idUser: e.user_id,
+                create_at: e.createdOnDate,
+                status: e.status,
+                reply: e.reply,
+                urlMedia: e.urlMedia,
+              };
+              listData.push(param);
               // }
             });
             return listData;
@@ -128,15 +131,21 @@ export class MessengerService {
    */
   create(payload: MessengerDto, idUser: string) {
     try {
+      if (!payload.content && !payload.urlMedia)
+        throw new BadRequestException('content or url media not emty');
       return new Promise((resolve, reject) => {
         Promise.all([
           this.groupChatRepository.findOne({
             where: { id: payload.group_id },
           }),
           this._checkUser(idUser),
-          payload.replyTo ? this.messengerRepository.findOne({where:{id:payload.replyTo}}) : Promise.resolve(null)
+          payload.replyTo
+            ? this.messengerRepository.findOne({
+                where: { id: payload.replyTo },
+              })
+            : Promise.resolve(null),
         ])
-          .then(async ([group, user,replyTo]) => {
+          .then(async ([group, user, replyTo]) => {
             if (!group || !user)
               throw new BadRequestException('group not found');
 
@@ -145,7 +154,7 @@ export class MessengerService {
               idUser,
               group,
               user[this.option.AliasNameUser] ?? 'user name',
-              replyTo
+              replyTo,
             );
           })
           .then((res) => resolve(res))
@@ -249,31 +258,35 @@ export class MessengerService {
     user_id: string,
     group: GroupChat,
     nameUser: string,
-    replyTo : Messenger | null
+    replyTo: Messenger | null,
   ) {
     try {
       const finalResult = await this.dataSource.manager.transaction(
         async (transactionalEntityManager) => {
-            const dataSave =replyTo ? {
-              messenger: param.content,
-              user_id: user_id,
-              group_chat_id: group,
-              hideInListUser: null,
-              reply:replyTo,
-              listUserUnRead: group.listIdUser
+          const dataSave = replyTo
+            ? {
+                urlMedia: param.urlMedia ?? null,
+                messenger: param.content,
+                user_id: user_id,
+                group_chat_id: group,
+                hideInListUser: null,
+                reply: replyTo,
+                listUserUnRead: group.listIdUser
                   .split(',')
                   .filter((e) => e !== user_id)
                   .join(','),
-          }: {
-              messenger: param.content,
-              user_id: user_id,
-              group_chat_id: group,
-              hideInListUser: null,
-              listUserUnRead: group.listIdUser
+              }
+            : {
+                urlMedia: param.urlMedia ?? null,
+                messenger: param.content,
+                user_id: user_id,
+                group_chat_id: group,
+                hideInListUser: null,
+                listUserUnRead: group.listIdUser
                   .split(',')
                   .filter((e) => e !== user_id)
                   .join(','),
-          };
+              };
           return new Promise((resolve, reject) => {
             Promise.all([
               transactionalEntityManager.save(Messenger, dataSave),
@@ -292,7 +305,8 @@ export class MessengerService {
                   idGroup: group.id,
                   idUser: result.user_id,
                   nameUser: nameUser,
-                  reply:replyTo
+                  reply: replyTo,
+                  urlMedia: param.urlMedia,
                 };
                 this.eventEmitter.emit(
                   EMITTER_SOCKET.SEND_MESSENGER,
@@ -388,37 +402,75 @@ export class MessengerService {
     }
   }
 
-  public async deleteMessenger(idMessenger: string,idUser:string){
+  /**
+   * TODO : delete Messenger
+   * @param idMessenger : string
+   * @param idUser : string
+   * @returns transaction delete messenger
+   */
+  public async deleteMessenger(idMessenger: string, idUser: string) {
     try {
-        return new Promise((resolve,reject)=>{
-            Promise.all([
-                this._checkUser(idUser),
-                this.messengerRepository.findOne({where:{id:idMessenger,status:STATUS_MESSENGER.ACTIVE}})
-            ]).then(async ([user,messenger])=>{
-                if(!user || !messenger) throw new BadRequestException(!user  ?'user not found' : 'messenger not found');
-                const finalResult = await this.dataSource.manager.transaction(
-                    async (transactionalEntityManager) => {
-                        const result = await transactionalEntityManager.save(
-                            Messenger,
-                            {
-                                ...messenger,
-                                status:
-                                    messenger.user_id === user[`${this.option.AliasIdUser}`] 
-                                        ? STATUS_MESSENGER.UNACTIVE 
-                                        : STATUS_MESSENGER.HIDE_BY_USER
-                            },
-                        );
-    
-                        return result;
-                    },
+      return new Promise((resolve, reject) => {
+        Promise.all([
+          this._checkUser(idUser),
+          this.messengerRepository.findOne({
+            where: {
+              id: idMessenger,
+              status: STATUS_MESSENGER.ACTIVE,
+            },
+          }),
+        ])
+          .then(async ([user, messenger]) => {
+            if (!user || !messenger)
+              throw new BadRequestException(
+                !user ? 'user not found' : 'messenger not found',
+              );
+            const finalResult = await this.dataSource.manager.transaction(
+              async (transactionalEntityManager) => {
+                const result = await transactionalEntityManager.save(
+                  Messenger,
+                  {
+                    ...messenger,
+                    status:
+                      messenger.user_id === user[`${this.option.AliasIdUser}`]
+                        ? STATUS_MESSENGER.UNACTIVE
+                        : STATUS_MESSENGER.HIDE_BY_USER,
+                  },
                 );
-                return finalResult;
-            })
-            .then(res=>resolve(res))
-            .catch(err=>reject(err))
-        })
+
+                return result;
+              },
+            );
+            return finalResult;
+          })
+          .then((res) => resolve(res))
+          .catch((err) => reject(err));
+      });
     } catch (error) {
-        throw error;
+      throw error;
     }
-}
+  }
+
+  /**
+   * TODO : get list media in group
+   * @param idGroup : string
+   * @param filter : SearchFilter
+   * @returns string[]
+   */
+  public async getListMediaInGroup(idGroup: string, filter: SearchFilter) {
+    try {
+      const listMedia = await this.messengerRepository
+        .find({
+          where: {
+            group_chat_id: { id: idGroup },
+            urlMedia: Not(IsNull()),
+            status: STATUS_MESSENGER.ACTIVE,
+          },
+        })
+        .then((res) => res.map((e) => e.urlMedia));
+      return listMedia;
+    } catch (error) {
+      throw error;
+    }
+  }
 }

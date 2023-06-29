@@ -4,7 +4,7 @@ import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 export class MessengerDto {
   @ApiProperty()
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   content: string;
 
   @ApiProperty()
@@ -17,6 +17,11 @@ export class MessengerDto {
   @IsString()
   @IsOptional()
   replyTo: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  urlMedia: string;
 }
 
 export class UpdateMessengerDto {
@@ -33,5 +38,6 @@ export class ResultMessengerData {
   createdOnDate: string | any;
   idGroup: string;
   nameUser: string;
-  reply:any
+  reply:any;
+  urlMedia:string |null
 }

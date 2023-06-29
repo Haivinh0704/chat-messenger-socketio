@@ -27,16 +27,13 @@ export class MessengerController {
     private authenticationService: AuthenticationService,
   ) {}
 
-    
   @Get('')
   @ApiOperation({ summary: 'count messenger unred' })
-  public async countMessengerUnread(
-      @Req() req: any,
-  ) {
-      var idUser = await this.authenticationService.decode(
-          req.headers.authorization,
-      );
-      return await this.messengerService.countMessengerUnread(idUser);
+  public async countMessengerUnread(@Req() req: any) {
+    var idUser = await this.authenticationService.decode(
+      req.headers.authorization,
+    );
+    return await this.messengerService.countMessengerUnread(idUser);
   }
 
   @Get(':id')
@@ -50,6 +47,19 @@ export class MessengerController {
       req.headers.authorization,
     );
     return await this.messengerService.getListMessenger(filter, id, idUser);
+  }
+
+  @Get('media-in-group/:idGroup')
+  @ApiOperation({ summary: 'get list media in group' })
+  public async getListMediaInGroup(
+      @Param('idGroup') idGroup: string,
+      @Query() filter: SearchFilter,
+      @Req() req: any,
+  ) {
+      var idUser = await this.authenticationService.decode(
+          req.headers.authorization,
+      );
+      return await this.messengerService.getListMediaInGroup(idGroup,filter);
   }
 
   @Post('')
@@ -73,16 +83,13 @@ export class MessengerController {
     );
     return await this.messengerService.update(payload, id, idUser);
   }
-  
+
   @Delete(':id')
   @ApiOperation({ summary: 'delete messenger id messenger' })
-  public async delete(
-      @Param('id') id: string,
-      @Req() req: any,
-  ) {
-      var idUser = await this.authenticationService.decode(
-          req.headers.authorization,
-      );
-      return await this.messengerService.deleteMessenger( id, idUser);
+  public async delete(@Param('id') id: string, @Req() req: any) {
+    var idUser = await this.authenticationService.decode(
+      req.headers.authorization,
+    );
+    return await this.messengerService.deleteMessenger(id, idUser);
   }
 }
