@@ -352,6 +352,9 @@ Create
 ## Change Log
 
 See [Changelog](./CHANGELOG.md) for more information.
+## Support
+
+Become my sponsor and help me maintain this project.(https://github.com/Haivinh0704/chat-messenger-socketio/issues) Thank you
 
 ## License
 
